@@ -12,7 +12,7 @@
 
 #define TCS34725_Read_Mode 0xD1u
 #define TCS34725_Write_Mode 0xD0u
-#define address (0x29)
+#define sensor 0x29
 #define bus_id (0x00)
 #define readbit (0x01)
 
@@ -71,24 +71,38 @@
 
 void TWIinit();
 void Wait_n_Check_Error(uint8_t expected);
-void TWIwrite(uint8_t slaveid, uint8_t addr, uint8_t data);
+void    TWIwrite(uint8_t slaveid, uint8_t addr, uint8_t data);
 uint8_t TWIread(uint8_t slaveid, uint8_t addr);
-void TCS34725init();
+void light_sensor_init();
+int16_t red_sensor_read();
+int16_t green_sensor_read();
+int16_t blue_sensor_read();
 
+//// Global Buffers and Vars ////
+char strbuf[100];
+uint8_t err;
+uint8_t TRACE=0;
 
 int main(void)
 {
 	DDRD = 0xFF;
 	DDRC = 0xFF;
-	int i;
-	int blue_random;
-	int red_random;
-	int green_random;
-	char snum[5];
+//	int i;
+//	int blue_random;
+//	int red_random;
+//	int green_random;
+	int16_t  red;
+	int16_t green;
+	int16_t blue;
+	char snum[16];
+
 	Init();
 	Clear();
-	Set_Cursor(1,2);
-	Write_String("COLOR SENSOR");	
+	//Set_Cursor(1,2);
+	//Write_String("COLOR SENSOR");	
+	
+	TWIinit();
+	light_sensor_init();
 	
 	Set_Cursor(2,0);
 	Write_String("R:");
@@ -100,8 +114,22 @@ int main(void)
 	
 	Set_Cursor(2,12);
 	Write_String("B:");
+	
+	
+	
+	
 
 	while(1){
+		red= red_sensor_read();
+		green = green_sensor_read();
+		blue = blue_sensor_read();
+		Write_String(itoa(red,snum,10));
+		Write_String(itoa(green,snum,10));
+		Write_String(itoa(blue,snum,10));
+		//Write_String(red);
+		//Write_String(blue);
+		//Write_String(green);
+		/*
 		// Red Value
 		red_random = rand() % 255;
 		Set_Cursor(2,2);
@@ -129,32 +157,32 @@ int main(void)
 			Set_Cursor(2,15);			
 		}
 		Write_String(itoa(blue_random,snum,10));
-		Set_Cursor(1,2);
-		Write_String("            ");
+		//Set_Cursor(1,2);
+		//Write_String("            ");
 		if (red_random < 128 && green_random < 128 && blue_random<128){
-					Set_Cursor(1,6);
-					Write_String("BLACK");
+					//Set_Cursor(1,6);
+					//Write_String("BLACK");
 		}else if (red_random>128 && green_random >128 && blue_random> 128){
-					Set_Cursor(1,6);
-					Write_String("WHITE");
+					//Set_Cursor(1,6);
+					//Write_String("WHITE");
 		}else if (red_random>128 && green_random <128 && blue_random< 128){
-					Set_Cursor(1,6);
-					Write_String("RED");
+					//Set_Cursor(1,6);
+					//Write_String("RED");
 		}else if (red_random<128 && green_random >128 && blue_random< 128){
-					Set_Cursor(1,6);
-					Write_String("GREEN");
+					//Set_Cursor(1,6);
+					//Write_String("GREEN");
 		}else if (red_random<128 && green_random <128 && blue_random> 128){
-					Set_Cursor(1,6);
-					Write_String("BLUE");
+					//Set_Cursor(1,6);
+					//Write_String("BLUE");
 		}else if (red_random>128 && green_random >128 && blue_random< 128){
-					Set_Cursor(1,6);
-					Write_String("YELLOW");
+					//Set_Cursor(1,6);
+					//Write_String("YELLOW");
 		}else if (red_random<128 && green_random >128 && blue_random> 128){
-					Set_Cursor(1,6);
-					Write_String("CYAN");
+					//Set_Cursor(1,6);
+					//Write_String("CYAN");
 		}else if (red_random>128 && green_random <128 && blue_random> 128){
-					Set_Cursor(1,6);
-					Write_String("MAGENTA");
+					//Set_Cursor(1,6);
+					//Write_String("MAGENTA");
 		}	
 		
 		
@@ -168,8 +196,9 @@ int main(void)
 			Shift_Right();
 		}
 		_delay_ms(100);
-
+	*/
 	}
+	
 }
 void TWIinit(){
 	DDRC |= (1 << PORTC0) | (1 << PORTC1);    // SDA and SCL are set to be outputs	$$$$$$$$
@@ -180,21 +209,65 @@ void TWIinit(){
 	// SCLfreq = 8000_000/(16+2*(2).(1))  = 400KHz    if use TWBR=2 (fastest)
 }
 
+void Wait_n_Check_Error(uint8_t expected){
+	while (!(TWCR & (1 << TWINT)));   // Wait for TWINT to set										$$$$$$$$
+	
+	if ((TWSR & 0xF8) != expected){
+		switch(expected){
+			case TW_START		         : sprintf(strbuf, "Expecting TW_START		           but got 0x%x\r\n", TWSR);   break;
+			case TW_REP_START		     : sprintf(strbuf, "Expecting TW_REP_START		       but got 0x%x\r\n", TWSR);   break;
+			case TW_MT_SLA_ACK		     : sprintf(strbuf, "Expecting TW_MT_SLA_ACK		       but got 0x%x\r\n", TWSR);   break;
+			case TW_MT_SLA_NACK		     : sprintf(strbuf, "Expecting TW_MT_SLA_NACK		   but got 0x%x\r\n", TWSR);   break;
+			case TW_MT_DATA_ACK		     : sprintf(strbuf, "Expecting TW_MT_DATA_ACK		   but got 0x%x\r\n", TWSR);   break;
+			case TW_MT_DATA_NACK		 : sprintf(strbuf, "Expecting TW_MT_DATA_NACK		   but got 0x%x\r\n", TWSR);   break;
+			case TW_MT_ARB_LOST		     : sprintf(strbuf, "Expecting TW_MT/R_ARB_LOST		   but got 0x%x\r\n", TWSR);   break;
+			case TW_MR_SLA_ACK		     : sprintf(strbuf, "Expecting TW_MR_SLA_ACK		       but got 0x%x\r\n", TWSR);   break;
+			case TW_MR_SLA_NACK		     : sprintf(strbuf, "Expecting TW_MR_SLA_NACK		   but got 0x%x\r\n", TWSR);   break;
+			case TW_MR_DATA_ACK		     : sprintf(strbuf, "Expecting TW_MR_DATA_ACK		   but got 0x%x\r\n", TWSR);   break;
+			case TW_MR_DATA_NACK		 : sprintf(strbuf, "Expecting TW_MR_DATA_NACK		   but got 0x%x\r\n", TWSR);   break;
+			case TW_ST_SLA_ACK		     : sprintf(strbuf, "Expecting TW_ST_SLA_ACK		       but got 0x%x\r\n", TWSR);   break;
+			case TW_ST_ARB_LOST_SLA_ACK	 : sprintf(strbuf, "Expecting TW_ST_ARB_LOST_SLA_ACK   but got 0x%x\r\n", TWSR);   break;
+			case TW_ST_DATA_ACK		     : sprintf(strbuf, "Expecting TW_ST_DATA_ACK		   but got 0x%x\r\n", TWSR);   break;
+			case TW_ST_DATA_NACK		 : sprintf(strbuf, "Expecting TW_ST_DATA_NACK		   but got 0x%x\r\n", TWSR);   break;
+			case TW_ST_LAST_DATA		 : sprintf(strbuf, "Expecting TW_ST_LAST_DATA		   but got 0x%x\r\n", TWSR);   break;
+			case TW_SR_SLA_ACK		     : sprintf(strbuf, "Expecting TW_SR_SLA_ACK		       but got 0x%x\r\n", TWSR);   break;
+			case TW_SR_ARB_LOST_SLA_ACK	 : sprintf(strbuf, "Expecting TW_SR_ARB_LOST_SLA_ACK   but got 0x%x\r\n", TWSR);   break;
+			case TW_SR_GCALL_ACK		 : sprintf(strbuf, "Expecting TW_SR_GCALL_ACK		   but got 0x%x\r\n", TWSR);   break;
+			case TW_SR_ARB_LOST_GCALL_ACK: sprintf(strbuf, "Expecting TW_SR_ARB_LOST_GCALL_ACK but got 0x%x\r\n", TWSR);   break;
+			case TW_SR_DATA_ACK		     : sprintf(strbuf, "Expecting TW_SR_DATA_ACK		   but got 0x%x\r\n", TWSR);   break;
+			case TW_SR_DATA_NACK		 : sprintf(strbuf, "Expecting TW_SR_DATA_NACK		   but got 0x%x\r\n", TWSR);   break;
+			case TW_SR_GCALL_DATA_ACK	 : sprintf(strbuf, "Expecting TW_SR_GCALL_DATA_ACK	   but got 0x%x\r\n", TWSR);   break;
+			case TW_SR_GCALL_DATA_NACK	 : sprintf(strbuf, "Expecting TW_SR_GCALL_DATA_NACK	   but got 0x%x\r\n", TWSR);   break;
+			case TW_SR_STOP		         : sprintf(strbuf, "Expecting TW_SR_STOP		       but got 0x%x\r\n", TWSR);   break;
+			default                      : sprintf(strbuf, "Expecting 0x%x but got 0x%x\r\n", expected,           TWSR);   break;
+		}
+	}
+}
+
 void TWIwrite(uint8_t slaveid, uint8_t addr, uint8_t data){
 	
 	// Send START condition, ACK is not expected
 	TWCR = _BV(TWINT)|_BV(TWEN)|_BV(TWSTA);							// $$$$$$$$
+	Wait_n_Check_Error(TW_START);
+
 	// Setup the slave ID (7bits) along with the intended operation (1bit)
 	TWDR = slaveid|TW_WRITE;										// $$$$$$$$
 	TWCR = _BV(TWINT)|_BV(TWEN)|_BV(TWEA);  // TWINT bit in TWCR to start transmission of address,
+	Wait_n_Check_Error(TW_MT_SLA_ACK); // expecting ACK				// $$$$$$$$
+
 	// Send the 1st byte which will be interpreted by the device as the register address,
 	TWDR = addr;
 	TWCR = _BV(TWINT)|_BV(TWEN)|_BV(TWEA);  // expecting ACK		// $$$$$$$$
+	Wait_n_Check_Error(TW_MT_DATA_ACK);								// $$$$$$$$
+	
 	// Send the 2nd byte which will be interpreted by the device as the register data,
 	TWDR = data;
 	TWCR = _BV(TWINT)|_BV(TWEN)|_BV(TWEA);  // expecting ACK		// $$$$$$$$
+	Wait_n_Check_Error(TW_MT_DATA_ACK);								// $$$$$$$$
+
 	// Send STOP condition, Nothing expected. Note that TWINT isn't set after STOP
 	TWCR = _BV(TWINT)|_BV(TWEN)|_BV(TWSTO);							// $$$$$$$$
+	
 	// Wait for STOP to be executed. TWINT is not set after a stop condition!
 	while(TWCR & _BV(TWSTO));
 }
@@ -222,6 +295,36 @@ uint8_t TWIread(uint8_t slaveid, uint8_t addr){
 	return data;
 	}
 
+void light_sensor_init(){
+	TWIwrite(ID , ENABLE, 0b11);
+	Set_Cursor(1,2);
+	Write_String("I Enabled");
+	
+}
+
+int16_t red_sensor_read(){
+	int16_t res;
+	res  = TWIread(ID, RDATAH)<<8;		// $$$$$$$$
+	res |= TWIread(ID, RDATAL);		// $$$$$$$$
+	return res;
+	
+}
+
+int16_t green_sensor_read(){
+	int16_t res;
+	res  = TWIread(ID, GDATAH)<<8;		// $$$$$$$$
+	res |= TWIread(ID, GDATAL);		// $$$$$$$$
+	return res;
+	
+}
+
+int16_t blue_sensor_read(){
+	int16_t res;
+	res  = TWIread(ID, BDATAH)<<8;		// $$$$$$$$
+	res |= TWIread(ID, BDATAL);		// $$$$$$$$
+	return res;
+	
+}
 
 
 
