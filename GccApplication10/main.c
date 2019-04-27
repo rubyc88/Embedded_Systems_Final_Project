@@ -116,16 +116,22 @@ int main(void)
 	Write_String("B:");
 	
 	
-	
+	uint8_t num;
 	
 
 	while(1){
+		red = red_sensor_read();
+		Set_Cursor(2,0);
+		Write_String("R");
+
+		/*
 		red= red_sensor_read();
 		green = green_sensor_read();
 		blue = blue_sensor_read();
 		Write_String(itoa(red,snum,10));
 		Write_String(itoa(green,snum,10));
 		Write_String(itoa(blue,snum,10));
+		*/
 		//Write_String(red);
 		//Write_String(blue);
 		//Write_String(green);
@@ -296,7 +302,7 @@ uint8_t TWIread(uint8_t slaveid, uint8_t addr){
 	}
 
 void light_sensor_init(){
-	TWIwrite(ID , ENABLE, 0b11);
+	TWIwrite(sensor , 0x80, 0b11);
 	Set_Cursor(1,2);
 	Write_String("I Enabled");
 	
@@ -304,8 +310,8 @@ void light_sensor_init(){
 
 int16_t red_sensor_read(){
 	int16_t res;
-	res  = TWIread(ID, RDATAH)<<8;		// $$$$$$$$
-	res |= TWIread(ID, RDATAL);		// $$$$$$$$
+	res  = TWIread(sensor, 0x96)<<8;		// $$$$$$$$
+	res |= TWIread(sensor, 0x97);		// $$$$$$$$
 	return res;
 	
 }
