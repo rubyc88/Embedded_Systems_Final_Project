@@ -39,17 +39,9 @@ Discarded input sections
  .text.pinChange
                 0x00000000       0x78 main.o
  .text.TWIinit  0x00000000       0x12 main.o
- .text.TWIStart
-                0x00000000       0x12 main.o
- .text.TWIStop  0x00000000        0x8 main.o
- .text.TWIWrite
-                0x00000000       0x16 main.o
- .text.TWIReadACK
-                0x00000000       0x16 main.o
- .text.TWIReadNACK
-                0x00000000       0x16 main.o
- .text.TWIGetStatus
-                0x00000000        0x8 main.o
+ .text.TWIwrite
+                0x00000000       0x26 main.o
+ .text.TWIread  0x00000000       0x30 main.o
  .text          0x00000000        0x0 c:/program files (x86)/atmel/studio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr5\libgcc.a(_divmodhi4.o)
  .data          0x00000000        0x0 c:/program files (x86)/atmel/studio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr5\libgcc.a(_divmodhi4.o)
  .bss           0x00000000        0x0 c:/program files (x86)/atmel/studio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr5\libgcc.a(_divmodhi4.o)
@@ -607,42 +599,42 @@ END GROUP
 .debug_sfnames
  *(.debug_sfnames)
 
-.debug_aranges  0x00000000       0xa8
+.debug_aranges  0x00000000       0x88
  *(.debug_aranges)
  .debug_aranges
-                0x00000000       0xa8 main.o
+                0x00000000       0x88 main.o
 
 .debug_pubnames
  *(.debug_pubnames)
 
-.debug_info     0x00000000     0x1751
+.debug_info     0x00000000     0x1725
  *(.debug_info .gnu.linkonce.wi.*)
  .debug_info    0x00000000      0x6cc C:/Program Files (x86)/Atmel/Studio/7.0/Packs/atmel/ATmega_DFP/1.2.209/gcc/dev/atmega324p/avr5/crtatmega324p.o
- .debug_info    0x000006cc     0x1085 main.o
+ .debug_info    0x000006cc     0x1059 main.o
 
-.debug_abbrev   0x00000000      0x970
+.debug_abbrev   0x00000000      0x94d
  *(.debug_abbrev)
  .debug_abbrev  0x00000000      0x66e C:/Program Files (x86)/Atmel/Studio/7.0/Packs/atmel/ATmega_DFP/1.2.209/gcc/dev/atmega324p/avr5/crtatmega324p.o
- .debug_abbrev  0x0000066e      0x302 main.o
+ .debug_abbrev  0x0000066e      0x2df main.o
 
-.debug_line     0x00000000      0x8d4
+.debug_line     0x00000000      0x87e
  *(.debug_line .debug_line.* .debug_line_end)
  .debug_line    0x00000000      0x151 C:/Program Files (x86)/Atmel/Studio/7.0/Packs/atmel/ATmega_DFP/1.2.209/gcc/dev/atmega324p/avr5/crtatmega324p.o
- .debug_line    0x00000151      0x783 main.o
+ .debug_line    0x00000151      0x72d main.o
 
-.debug_frame    0x00000000      0x160
+.debug_frame    0x00000000      0x120
  *(.debug_frame)
- .debug_frame   0x00000000      0x160 main.o
+ .debug_frame   0x00000000      0x120 main.o
 
-.debug_str      0x00000000      0x4f0
+.debug_str      0x00000000      0x4c2
  *(.debug_str)
  .debug_str     0x00000000      0x255 C:/Program Files (x86)/Atmel/Studio/7.0/Packs/atmel/ATmega_DFP/1.2.209/gcc/dev/atmega324p/avr5/crtatmega324p.o
- .debug_str     0x00000255      0x29b main.o
-                                0x2d9 (size before relaxing)
+ .debug_str     0x00000255      0x26d main.o
+                                0x2ab (size before relaxing)
 
-.debug_loc      0x00000000      0xb16
+.debug_loc      0x00000000      0xb14
  *(.debug_loc)
- .debug_loc     0x00000000      0xb16 main.o
+ .debug_loc     0x00000000      0xb14 main.o
 
 .debug_macinfo
  *(.debug_macinfo)
@@ -662,9 +654,9 @@ END GROUP
 .debug_pubtypes
  *(.debug_pubtypes)
 
-.debug_ranges   0x00000000       0x98
+.debug_ranges   0x00000000       0x78
  *(.debug_ranges)
- .debug_ranges  0x00000000       0x98 main.o
+ .debug_ranges  0x00000000       0x78 main.o
 
 .debug_macro
  *(.debug_macro)

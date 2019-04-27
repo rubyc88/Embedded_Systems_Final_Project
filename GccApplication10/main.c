@@ -67,6 +67,8 @@
 #include <util/delay.h>
 #include <util/twi.h>
 
+#define BUADRATE 51
+
 void TWIinit();
 void Wait_n_Check_Error(uint8_t expected);
 void TWIwrite(uint8_t slaveid, uint8_t addr, uint8_t data);
@@ -170,45 +172,55 @@ int main(void)
 	}
 }
 void TWIinit(){
-  // Sets SCL to 400kHz
-  TWSR = 0x00;
-  TWBR = 0x0C;
-  // enable TWI
-  TWCR = (1<<TWEN); 
-}
-void TWIStart(void){
-	TWCR = (1<<TWINT)|(1<<TWSTA)|(1<<TWEN);
-	while ((TWCR & (1<<TWINT)) == 0);
-}
-void TWIStop(void){
-	TWCR = (1<<TWINT)|(1<<TWSTO)|(1<<TWEN);
+	DDRC |= (1 << PORTC0) | (1 << PORTC1);    // SDA and SCL are set to be outputs	$$$$$$$$
+	TWSR = (0b00 << TWPS0);   // TWPS=00 --> prescale =0 --> div by 1				$$$$$$$$
+	TWBR = 8;   // SCLfreq = clkCPU/(16+2*(TWBR).(TWPS))							$$$$$$$$
+	// SCLfreq = 8000_000/(16+2*(12).(1)) = 200KHz    if use TWBR=12
+	// SCLfreq = 8000_000/(16+2*(8).(1))  = 250KHz    if use TWBR=8
+	// SCLfreq = 8000_000/(16+2*(2).(1))  = 400KHz    if use TWBR=2 (fastest)
 }
 
-void TWIWrite(uint8_t u8data){
-	TWDR = u8data;
-	TWCR = (1<<TWINT)|(1<<TWEN);
-	while ((TWCR & (1<<TWINT)) == 0);
+void TWIwrite(uint8_t slaveid, uint8_t addr, uint8_t data){
+	
+	// Send START condition, ACK is not expected
+	TWCR = _BV(TWINT)|_BV(TWEN)|_BV(TWSTA);							// $$$$$$$$
+	// Setup the slave ID (7bits) along with the intended operation (1bit)
+	TWDR = slaveid|TW_WRITE;										// $$$$$$$$
+	TWCR = _BV(TWINT)|_BV(TWEN)|_BV(TWEA);  // TWINT bit in TWCR to start transmission of address,
+	// Send the 1st byte which will be interpreted by the device as the register address,
+	TWDR = addr;
+	TWCR = _BV(TWINT)|_BV(TWEN)|_BV(TWEA);  // expecting ACK		// $$$$$$$$
+	// Send the 2nd byte which will be interpreted by the device as the register data,
+	TWDR = data;
+	TWCR = _BV(TWINT)|_BV(TWEN)|_BV(TWEA);  // expecting ACK		// $$$$$$$$
+	// Send STOP condition, Nothing expected. Note that TWINT isn't set after STOP
+	TWCR = _BV(TWINT)|_BV(TWEN)|_BV(TWSTO);							// $$$$$$$$
+	// Wait for STOP to be executed. TWINT is not set after a stop condition!
+	while(TWCR & _BV(TWSTO));
 }
-uint8_t TWIReadACK(void){
-	TWCR = (1<<TWINT)|(1<<TWEN)|(1<<TWEA);
-	while ((TWCR & (1<<TWINT)) == 0);
-	return TWDR;
-}
-
-uint8_t TWIReadNACK(void){
-	TWCR = (1<<TWINT)|(1<<TWEN);
-	while ((TWCR & (1<<TWINT)) == 0);
-	return TWDR;
-}
-
-uint8_t TWIGetStatus(void){
-	uint8_t status;
-	//mask status
-	status = TWSR & 0xF8;
-	return status;
-}
-
-
+uint8_t TWIread(uint8_t slaveid, uint8_t addr){
+	// Send START condition, ACK is not expected
+	TWCR = _BV(TWINT)|_BV(TWEN)|_BV(TWSTA);		
+	// Setup the slave ID (7bits) along with the intended operation (1bit)
+	TWDR = slaveid|TW_WRITE;
+	TWCR = _BV(TWINT)|_BV(TWEN)|_BV(TWEA);  // TWINT bit in TWCR to start transmission of address,
+	// Send the 1st byte which will be interpreted by the device as the register address,
+	TWDR = addr;
+	TWCR = _BV(TWINT)|_BV(TWEN)|_BV(TWEA);// expecting ACK
+	// Send Repeat START
+	TWCR = _BV(TWINT)|_BV(TWSTA)|_BV(TWEN);
+	// Tell the device that you need to read the data for the address sent before
+	TWDR = slaveid|TW_READ;                  // Setup the slave ID + READ						// $$$$$$$$
+	TWCR = _BV(TWINT)|_BV(TWEN)|_BV(TWEA);    // TWINT bit in TWCR to start transmission of address.
+	// Asking the slave to send the data byte,
+	TWCR = _BV(TWINT)|_BV(TWEN);            // TWINT bit in TWCR to start transmission of data. // $$$$$$$$
+	uint8_t data = TWDR;	                       // Read the received data
+	// Send STOP condition, Nothing expected. Note that TWINT isn't set after STOP
+	TWCR = _BV(TWINT)|_BV(TWEN)|_BV(TWSTO);
+	// Wait for STOP to be executed. TWINT is not set after a stop condition!
+	while(TWCR & _BV(TWSTO));
+	return data;
+	}
 
 
 
